@@ -56,6 +56,12 @@ create policy "pod_upload_staff_courier"
     )
   );
 
+-- ---- Force password change on first login ----
+-- Set true whenever an admin hand-creates a login with a temporary password
+-- (the normal path here, since self-signup is disabled and email delivery
+-- for password reset links is unreliable on the default Supabase sender).
+alter table profiles add column if not exists must_change_password boolean not null default true;
+
 -- ---- Admin account management ----
 -- Admins can view and edit ANY profile (role, name, phone, depot), not just
 -- their own. Needed for the in-app admin user-management panel — without

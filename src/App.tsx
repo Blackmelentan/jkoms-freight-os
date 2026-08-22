@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 
 import { Login } from '@/pages/Login';
+import { ChangePassword } from '@/pages/ChangePassword';
 import { Dashboard } from '@/pages/Dashboard';
 import { PackageCreate } from '@/pages/PackageCreate';
 import { LabelPrint } from '@/pages/LabelPrint';
@@ -28,8 +29,21 @@ function AuthedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
+function RequireSession({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuthStore();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">Loading…</div>
+    );
+  }
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { session, profile, loading } = useAuthStore();
   const location = useLocation();
 
   if (loading) {
@@ -39,6 +53,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (profile?.must_change_password && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
   }
   return <AuthedLayout>{children}</AuthedLayout>;
 }
@@ -54,6 +71,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<RequireSession><ChangePassword /></RequireSession>} />
       <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
       <Route path="/packages/new" element={<RequireAuth><PackageCreate /></RequireAuth>} />
       <Route path="/labels" element={<RequireAuth><LabelPrint /></RequireAuth>} />

@@ -12,6 +12,7 @@ export interface Profile {
   role: UserRole;
   phone: string | null;
   depot_id: string | null;
+  must_change_password: boolean;
   created_at: string;
 }
 
