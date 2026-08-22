@@ -13,6 +13,7 @@ import { ScanPage } from '@/pages/ScanPage';
 import { Shipments } from '@/pages/Shipments';
 import { ShipmentDetail } from '@/pages/ShipmentDetail';
 import { Analytics } from '@/pages/Analytics';
+import { AdminUsers } from '@/pages/AdminUsers';
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -60,6 +61,7 @@ export default function App() {
       <Route path="/shipments" element={<RequireAuth><Shipments /></RequireAuth>} />
       <Route path="/shipments/:id" element={<RequireAuth><ShipmentDetail /></RequireAuth>} />
       <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
+      <Route path="/accounts" element={<RequireAuth><AdminUsers /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

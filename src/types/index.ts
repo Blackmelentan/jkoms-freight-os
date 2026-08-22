@@ -73,6 +73,7 @@ export interface Package {
   origin_depot_id: string | null;
   destination_depot_id: string | null;
   assigned_courier_id: string | null;
+  client_id: string | null;
   weight_kg: number | null;
   declared_value: number | null;
   service_level: 'standard' | 'express' | 'same_day';
@@ -91,7 +92,16 @@ export interface ScanEvent {
   lat: number | null;
   lng: number | null;
   device_note: string | null;
+  attachment_url: string | null;
+  signature_data: string | null;
   created_at: string;
+}
+
+export interface CourierOption {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  depot_id: string | null;
 }
 
 export interface PackageWithLatestScan extends Package {

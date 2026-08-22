@@ -5,9 +5,12 @@ import { supabase } from '@/lib/supabase';
 import type { Package, ScanEvent, Depot } from '@/types';
 import { SHIPMENT_STATUS_LABEL } from '@/types';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { CourierAssign } from '@/components/shipments/CourierAssign';
+import { useAuthStore } from '@/store/authStore';
 
 export function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
+  const myRole = useAuthStore((s) => s.profile?.role);
   const [pkg, setPkg] = useState<Package | null>(null);
   const [events, setEvents] = useState<ScanEvent[]>([]);
   const [depots, setDepots] = useState<Record<string, Depot>>({});
@@ -96,7 +99,40 @@ export function ShipmentDetail() {
           {pkg.weight_kg && <p className="text-sm text-slate-700">Weight: {pkg.weight_kg} kg</p>}
           {pkg.declared_value && <p className="text-sm text-slate-700">Declared value: {pkg.declared_value}</p>}
         </div>
+        {(myRole === 'admin' || myRole === 'warehouse') && (
+          <CourierAssign
+            packageId={pkg.id}
+            currentCourierId={pkg.assigned_courier_id}
+            onAssigned={(courierId) => setPkg({ ...pkg, assigned_courier_id: courierId })}
+          />
+        )}
       </div>
+
+      {events.some((e) => e.attachment_url || e.signature_data) && (
+        <div className="panel mt-4 p-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Proof of Delivery</p>
+          {events
+            .filter((e) => e.attachment_url || e.signature_data)
+            .map((e) => (
+              <div key={e.id} className="mb-4 flex flex-wrap gap-4 last:mb-0">
+                {e.attachment_url && (
+                  <img
+                    src={e.attachment_url}
+                    alt="Delivery proof"
+                    className="h-32 w-32 rounded-md border border-slate-200 object-cover"
+                  />
+                )}
+                {e.signature_data && (
+                  <img
+                    src={e.signature_data}
+                    alt="Recipient signature"
+                    className="h-32 w-48 rounded-md border border-slate-200 bg-white object-contain"
+                  />
+                )}
+              </div>
+            ))}
+        </div>
+      )}
 
       <div className="panel mt-4 p-5">
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Scan History</p>

@@ -55,12 +55,12 @@ jkoms-logistics/
    ```
 
 2. **Create a Supabase project** at [supabase.com](https://supabase.com), then
-   in the SQL editor run the two files in `supabase/migrations/` in order
-   (`0001_init.sql` first).
+   in the SQL editor run the migration files in `supabase/migrations/` **in
+   numeric order** — `0001_init.sql`, then `0002_courier_performance_view.sql`,
+   then `0003_feature_completion.sql`.
 
 3. **Create your first admin user**: sign a user up normally (Supabase Auth
-   → Users → Add user, or via the app's sign-up flow if you add one), then in
-   the SQL editor:
+   → Users → Add user), then in the SQL editor:
    ```sql
    update profiles set role = 'admin', full_name = 'Your Name' where id = 'the-user-uuid';
    ```
@@ -76,10 +76,67 @@ jkoms-logistics/
    ```bash
    npm run dev
    ```
-   Opens on `http://localhost:5173`. The dev server also binds to your LAN
-   (`host: true` in vite.config.ts) so you can open the same URL from a phone
-   or handheld scanner on the same WiFi to test the camera/HID flows on real
-   hardware.
+
+## Managing accounts and roles
+
+Sign in as admin and go to **Accounts** in the sidebar. New logins are still
+created in Supabase Auth directly (the anon key the app ships with can never
+create users — that needs the service_role key, which must never reach the
+browser), but once a login exists, its role/name/phone/depot are all editable
+right there in the app — no more manual SQL per account.
+
+## Proof of delivery
+
+When a courier sets the scan target to **Delivered**, the Scan page requires
+a photo and/or a signature before the scan will submit. Photos upload to the
+`proof-of-delivery` Storage bucket (created by migration 0003); the
+signature is stored as a base64 PNG directly on the `scan_events` row. Both
+show up on the Shipment Detail page once delivered.
+
+## Courier assignment
+
+On any Shipment Detail page, admin/warehouse users get a courier dropdown
+(pulled from accounts with the `courier` role). Once assigned, that
+courier's own login can see and update that specific package — enforced at
+the RLS level, not just hidden in the UI.
+
+## Client portal
+
+Clients see only their own shipments automatically — enforced by the
+`packages_read_client` RLS policy, which matches on `profiles.phone ==
+packages.recipient_phone`. **To give a client visibility into their
+shipments: when creating their account, set their profile phone number to
+match the recipient phone number used on their packages.** Staff-only
+actions (New Package, Scan, Print Labels) are hidden from the client's UI.
+
+For exact linkage instead of a phone match (e.g. a client whose recipient
+phone changes), `packages.client_id` also exists — set it directly on a
+package to link it to a specific client account regardless of phone number.
+
+## SMS/WhatsApp notifications
+
+`supabase/functions/notify-status-change/index.ts` is a Supabase Edge
+Function that texts the recipient whenever a package's status changes, via
+Africa's Talking (better Gambia/West Africa coverage than Twilio — swap the
+fetch call if you'd rather use something else).
+
+To turn it on:
+1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then from the project root:
+   ```bash
+   supabase functions deploy notify-status-change
+   supabase secrets set AFRICASTALKING_USERNAME=your-username
+   supabase secrets set AFRICASTALKING_API_KEY=your-api-key
+   ```
+2. In the Supabase Dashboard: **Database → Webhooks → Create a new webhook**
+   - Table: `scan_events`
+   - Events: `Insert`
+   - Type: `Supabase Edge Functions`
+   - Function: `notify-status-change`
+3. Test it by making a scan — the recipient on that package should get a text.
+
+If you'd rather not stand up an Edge Function yet, the app works fully
+without this — it's an additive layer on top of the scan/status system, not
+a dependency of it.
 
 ## Munbyn thermal printer setup
 
@@ -143,19 +200,15 @@ not something the app can change.
   ("the courier says they delivered it, when exactly did that scan happen
   and from which method").
 
-## Suggested next steps (not built yet, worth planning for)
+## Still worth planning for (not built)
 
-- **Courier assignment workflow**: currently `assigned_courier_id` exists on
-  the schema but there's no UI to assign a courier to a package — worth a
-  small admin panel once you have real courier accounts.
-- **SMS/WhatsApp notifications** on status change (Twilio or Africa's
-  Talking would fit the Gambia + Scotland dual-market context better than a
-  US-only provider) — hook into a Supabase Edge Function triggered off
-  `scan_events` inserts.
-- **Proof of delivery**: photo capture + signature pad at the `delivered`
-  scan step, stored in Supabase Storage, linked from `scan_events` via a new
-  `attachment_url` column.
-- **Multi-tenant client portal**: the `client` role exists in the schema but
-  the RLS policy for it is a placeholder — decide how a client's shipments
-  get linked to their auth account (email match on sender/recipient, or an
-  explicit `client_id` foreign key) before exposing that role in production.
+- **WhatsApp Business API** instead of/alongside plain SMS — Africa's
+  Talking also supports this, but it needs a Meta Business verification
+  process that takes a few days, so it wasn't wired in by default.
+- **Bulk label printing** — Print Labels currently handles one package at a
+  time; a warehouse processing a large batch might want multi-select +
+  print-all.
+- **Depot-level filtering** — packages/analytics currently show the whole
+  network to admin/warehouse; a depot-scoped staff role (see only their
+  depot's packages) isn't built, only the `depot_id` column exists on
+  `profiles` for future use.

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Bluetooth, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Camera, Bluetooth, CheckCircle2, XCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useHidScanner } from '@/hooks/useHidScanner';
 import { CameraScanner } from '@/components/scanner/CameraScanner';
+import { SignaturePad } from '@/components/scanner/SignaturePad';
+import { PhotoCapture } from '@/components/scanner/PhotoCapture';
 import type { Package, ScanEvent, ShipmentStatus } from '@/types';
 import { SHIPMENT_STATUS_LABEL, SHIPMENT_STATUS_ORDER } from '@/types';
 
@@ -38,6 +40,12 @@ export function ScanPage() {
   const [queueSize, setQueueSize] = useState(0);
   const processingLock = useRef(false);
 
+  // Proof of delivery — only relevant/required when targetStatus is 'delivered'.
+  const [podPhoto, setPodPhoto] = useState<File | null>(null);
+  const [podSignature, setPodSignature] = useState<string | null>(null);
+  const isDeliveryScan = targetStatus === 'delivered';
+  const podReady = !isDeliveryScan || !!podPhoto || !!podSignature;
+
   useEffect(() => {
     setQueueSize(readQueue().length);
     const flush = () => void flushQueue();
@@ -49,10 +57,36 @@ export function ScanPage() {
     async (code: string, method: 'camera' | 'bluetooth_hid') => {
       // Guard against double-fires (camera cooldown + a stray Bluetooth Enter, etc.)
       if (processingLock.current) return;
+      if (isDeliveryScan && !podReady) {
+        pushResult({
+          code,
+          pkg: null,
+          newStatus: null,
+          ok: false,
+          message: 'Capture a photo or signature before confirming delivery.',
+          at: Date.now()
+        });
+        return;
+      }
       processingLock.current = true;
       setProcessing(true);
 
       if (!navigator.onLine) {
+        // Offline queue can't carry a File object through localStorage/JSON,
+        // so delivery scans with a photo attached simply aren't queueable —
+        // require connectivity for those specifically.
+        if (isDeliveryScan && podPhoto) {
+          pushResult({
+            code,
+            pkg: null,
+            newStatus: null,
+            ok: false,
+            message: 'Photo proof needs a connection to upload — reconnect and try again.',
+            at: Date.now()
+          });
+          processing_reset();
+          return;
+        }
         enqueue({ code, status: targetStatus, method, queuedAt: Date.now() });
         setQueueSize(readQueue().length);
         pushResult({
@@ -67,8 +101,12 @@ export function ScanPage() {
         return;
       }
 
-      const result = await applyScan(code, targetStatus, method, profile?.id);
+      const result = await applyScan(code, targetStatus, method, profile?.id, podPhoto, podSignature);
       pushResult(result);
+      if (result.ok && isDeliveryScan) {
+        setPodPhoto(null);
+        setPodSignature(null);
+      }
       processing_reset();
 
       function processing_reset() {
@@ -80,7 +118,7 @@ export function ScanPage() {
         }, 600);
       }
     },
-    [targetStatus, profile?.id]
+    [targetStatus, profile?.id, isDeliveryScan, podReady, podPhoto, podSignature]
   );
 
   function pushResult(result: ScanResult) {
@@ -92,7 +130,7 @@ export function ScanPage() {
     const queue = readQueue();
     if (queue.length === 0) return;
     for (const item of queue) {
-      const result = await applyScan(item.code, item.status, item.method, profile?.id);
+      const result = await applyScan(item.code, item.status, item.method, profile?.id, null, null);
       pushResult(result);
     }
     localStorage.removeItem(QUEUE_KEY);
@@ -145,6 +183,21 @@ export function ScanPage() {
           <option value="exception">{SHIPMENT_STATUS_LABEL.exception}</option>
         </select>
       </label>
+
+      {isDeliveryScan && (
+        <div className="mb-4 rounded-md border border-jkoms-navy/15 bg-jkoms-navy/5 p-4">
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-jkoms-navy">
+            <ShieldCheck className="h-4 w-4" /> Proof of Delivery
+          </p>
+          <p className="mb-3 text-xs text-slate-500">Capture a photo, a signature, or both before scanning.</p>
+          <div className="flex flex-wrap gap-4">
+            <PhotoCapture onChange={setPodPhoto} />
+            <div className="w-full max-w-xs">
+              <SignaturePad onChange={setPodSignature} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mode toggle */}
       <div className="mb-4 flex rounded-md border border-slate-200 bg-white p-1">
@@ -245,7 +298,9 @@ async function applyScan(
   code: string,
   status: ShipmentStatus,
   method: 'camera' | 'bluetooth_hid',
-  scannedBy: string | undefined
+  scannedBy: string | undefined,
+  podPhoto: File | null,
+  podSignature: string | null
 ): Promise<ScanResult> {
   const trimmed = code.trim();
 
@@ -265,11 +320,24 @@ async function applyScan(
     return { code: trimmed, pkg, newStatus: null, ok: false, message: updateError.message, at: Date.now() };
   }
 
+  // Upload proof-of-delivery photo, if provided, before writing the scan event
+  // so the event row can carry the resulting public URL in one insert.
+  let attachmentUrl: string | null = null;
+  if (podPhoto) {
+    const path = `${pkg.id}/${Date.now()}-${podPhoto.name}`;
+    const { error: uploadError } = await supabase.storage.from('proof-of-delivery').upload(path, podPhoto);
+    if (!uploadError) {
+      attachmentUrl = supabase.storage.from('proof-of-delivery').getPublicUrl(path).data.publicUrl;
+    }
+  }
+
   const scanEvent: Partial<ScanEvent> = {
     package_id: pkg.id,
     scanned_by: scannedBy,
     status,
-    scan_method: method
+    scan_method: method,
+    attachment_url: attachmentUrl,
+    signature_data: podSignature
   };
   await supabase.from('scan_events').insert(scanEvent);
 

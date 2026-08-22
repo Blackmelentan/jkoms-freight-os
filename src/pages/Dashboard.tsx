@@ -15,6 +15,8 @@ interface Counts {
 
 export function Dashboard() {
   const profile = useAuthStore((s) => s.profile);
+  const isStaff = profile?.role === 'admin' || profile?.role === 'warehouse';
+  const isCourier = profile?.role === 'courier';
   const [recent, setRecent] = useState<Package[]>([]);
   const [counts, setCounts] = useState<Counts>({ total: 0, inTransit: 0, deliveredToday: 0, exceptions: 0 });
   const [loading, setLoading] = useState(true);
@@ -83,20 +85,28 @@ export function Dashboard() {
           <h1 className="text-xl font-display text-jkoms-navy">
             Welcome{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
           </h1>
-          <p className="text-sm text-slate-500">Here's what's moving through the network right now.</p>
+          <p className="text-sm text-slate-500">
+            {profile?.role === 'client'
+              ? 'Track your shipments below.'
+              : "Here's what's moving through the network right now."}
+          </p>
         </div>
         <div className="flex gap-2">
-          <Link to="/packages/new" className="btn-primary flex items-center gap-2 text-sm">
-            <PackagePlus className="h-4 w-4" /> New Package
-          </Link>
-          <Link to="/scan" className="btn-secondary flex items-center gap-2 text-sm">
-            <ScanLine className="h-4 w-4" /> Scan
-          </Link>
+          {isStaff && (
+            <Link to="/packages/new" className="btn-primary flex items-center gap-2 text-sm">
+              <PackagePlus className="h-4 w-4" /> New Package
+            </Link>
+          )}
+          {(isStaff || isCourier) && (
+            <Link to="/scan" className="btn-secondary flex items-center gap-2 text-sm">
+              <ScanLine className="h-4 w-4" /> Scan
+            </Link>
+          )}
         </div>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total Shipments" value={counts.total} loading={loading} />
+        <StatCard label={profile?.role === 'client' ? 'My Shipments' : 'Total Shipments'} value={counts.total} loading={loading} />
         <StatCard label="In Transit" value={counts.inTransit} loading={loading} accent="text-jkoms-steel" />
         <StatCard label="Delivered Today" value={counts.deliveredToday} loading={loading} accent="text-status-delivered" />
         <StatCard
@@ -158,14 +168,16 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-        <Printer className="h-3.5 w-3.5" />
-        Printing labels? Head to the{' '}
-        <Link to="/labels" className="text-jkoms-steel hover:underline">
-          Print Labels
-        </Link>{' '}
-        screen for the Munbyn-formatted layout.
-      </div>
+      {isStaff && (
+        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+          <Printer className="h-3.5 w-3.5" />
+          Printing labels? Head to the{' '}
+          <Link to="/labels" className="text-jkoms-steel hover:underline">
+            Print Labels
+          </Link>{' '}
+          screen for the Munbyn-formatted layout.
+        </div>
+      )}
     </div>
   );
 }
