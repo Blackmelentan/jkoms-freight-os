@@ -80,6 +80,7 @@ export function AdminUsers() {
               <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Role</th>
+                <th className="px-5 py-3 font-medium">Client Code</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Depot</th>
                 <th className="px-5 py-3 font-medium">Joined</th>
@@ -113,6 +114,7 @@ export function AdminUsers() {
                       ))}
                     </select>
                   </td>
+                  <td className="px-5 py-3 font-mono text-xs text-jkoms-steel">{p.client_code ?? '—'}</td>
                   <td className="px-5 py-3">
                     <input
                       defaultValue={p.phone ?? ''}
@@ -149,7 +151,7 @@ export function AdminUsers() {
               ))}
               {!loading && profiles.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
                     No accounts found.
                   </td>
                 </tr>

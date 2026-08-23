@@ -105,6 +105,18 @@ export function Dashboard() {
         </div>
       </div>
 
+      {profile?.role === 'client' && profile.client_code && (
+        <div className="mb-6 flex items-center justify-between rounded-md border border-jkoms-navy/15 bg-jkoms-navy/5 px-4 py-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Your Client Code</p>
+            <p className="font-mono text-lg font-bold text-jkoms-navy">{profile.client_code}</p>
+          </div>
+          <p className="max-w-xs text-right text-xs text-slate-500">
+            Give this to a courier or warehouse staffer to link a package to your account.
+          </p>
+        </div>
+      )}
+
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label={profile?.role === 'client' ? 'My Shipments' : 'Total Shipments'} value={counts.total} loading={loading} />
         <StatCard label="In Transit" value={counts.inTransit} loading={loading} accent="text-jkoms-steel" />

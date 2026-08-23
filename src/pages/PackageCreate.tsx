@@ -4,16 +4,21 @@ import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
 import { generateTrackingCode } from '@/utils/trackingCode';
 import { useAuthStore } from '@/store/authStore';
-import type { Depot } from '@/types';
-import { Loader2, Printer } from 'lucide-react';
+import type { Depot, Profile } from '@/types';
+import { Loader2, Printer, Search, UserCheck, X } from 'lucide-react';
+import { GeoCapture } from '@/components/ui/GeoCapture';
 
 interface FormState {
   sender_name: string;
   sender_phone: string;
   sender_address: string;
+  sender_lat: number | null;
+  sender_lng: number | null;
   recipient_name: string;
   recipient_phone: string;
   recipient_address: string;
+  recipient_lat: number | null;
+  recipient_lng: number | null;
   origin_depot_id: string;
   destination_depot_id: string;
   weight_kg: string;
@@ -26,9 +31,13 @@ const EMPTY_FORM: FormState = {
   sender_name: '',
   sender_phone: '',
   sender_address: '',
+  sender_lat: null,
+  sender_lng: null,
   recipient_name: '',
   recipient_phone: '',
   recipient_address: '',
+  recipient_lat: null,
+  recipient_lng: null,
   origin_depot_id: '',
   destination_depot_id: '',
   weight_kg: '',
@@ -46,9 +55,31 @@ export function PackageCreate() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Client account linking — search by client code or phone, not required.
+  const [clientQuery, setClientQuery] = useState('');
+  const [clientResults, setClientResults] = useState<Profile[]>([]);
+  const [linkedClient, setLinkedClient] = useState<Profile | null>(null);
+
   useEffect(() => {
     void supabase.from('depots').select('*').then(({ data }) => setDepots((data as Depot[]) ?? []));
   }, []);
+
+  useEffect(() => {
+    if (clientQuery.trim().length < 2) {
+      setClientResults([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      void supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'client')
+        .or(`client_code.ilike.%${clientQuery}%,phone.ilike.%${clientQuery}%,full_name.ilike.%${clientQuery}%`)
+        .limit(6)
+        .then(({ data }) => setClientResults((data as Profile[]) ?? []));
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [clientQuery]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -69,9 +100,14 @@ export function PackageCreate() {
         sender_name: form.sender_name,
         sender_phone: form.sender_phone || null,
         sender_address: form.sender_address,
+        sender_lat: form.sender_lat,
+        sender_lng: form.sender_lng,
         recipient_name: form.recipient_name,
         recipient_phone: form.recipient_phone,
         recipient_address: form.recipient_address,
+        recipient_lat: form.recipient_lat,
+        recipient_lng: form.recipient_lng,
+        client_id: linkedClient?.id ?? null,
         origin_depot_id: form.origin_depot_id || null,
         destination_depot_id: form.destination_depot_id || null,
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
@@ -120,6 +156,14 @@ export function PackageCreate() {
               full
               textarea
             />
+            <div className="sm:col-span-2">
+              <GeoCapture
+                lat={form.sender_lat}
+                lng={form.sender_lng}
+                onCapture={(lat, lng) => setForm((f) => ({ ...f, sender_lat: lat, sender_lng: lng }))}
+                label="Pin sender's exact location (optional)"
+              />
+            </div>
           </Section>
 
           <Section title="Recipient">
@@ -133,7 +177,62 @@ export function PackageCreate() {
               full
               textarea
             />
+            <div className="sm:col-span-2">
+              <GeoCapture
+                lat={form.recipient_lat}
+                lng={form.recipient_lng}
+                onCapture={(lat, lng) => setForm((f) => ({ ...f, recipient_lat: lat, recipient_lng: lng }))}
+                label="Pin recipient's exact location (recommended — helps couriers without a street address)"
+              />
+            </div>
           </Section>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-semibold text-jkoms-navy">Link to Client Account (optional)</legend>
+            {linkedClient ? (
+              <div className="flex items-center justify-between rounded-md border border-status-delivered/30 bg-status-delivered/5 px-3 py-2">
+                <span className="flex items-center gap-1.5 text-sm text-status-delivered">
+                  <UserCheck className="h-4 w-4" />
+                  {linkedClient.full_name || linkedClient.client_code} ({linkedClient.client_code})
+                </span>
+                <button type="button" onClick={() => setLinkedClient(null)} className="text-slate-400 hover:text-status-exception">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <label className="relative flex items-center">
+                  <Search className="pointer-events-none absolute left-3 h-4 w-4 text-slate-400" />
+                  <input
+                    value={clientQuery}
+                    onChange={(e) => setClientQuery(e.target.value)}
+                    placeholder="Search client code, phone, or name…"
+                    className="w-full rounded-md border border-slate-300 py-2.5 pl-9 pr-3 text-sm focus:border-jkoms-navy focus:outline-none focus:ring-1 focus:ring-jkoms-navy"
+                  />
+                </label>
+                {clientResults.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full divide-y divide-slate-100 rounded-md border border-slate-200 bg-white shadow-panel">
+                    {clientResults.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLinkedClient(c);
+                            setClientQuery('');
+                            setClientResults([]);
+                          }}
+                          className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        >
+                          <span>{c.full_name || 'Unnamed'}</span>
+                          <span className="font-mono text-xs text-jkoms-steel">{c.client_code}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </fieldset>
 
           <Section title="Routing & Service">
             <SelectField

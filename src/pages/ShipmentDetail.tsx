@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Printer } from 'lucide-react';
+import { ArrowLeft, MapPin, Printer, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Package, ScanEvent, Depot } from '@/types';
 import { SHIPMENT_STATUS_LABEL } from '@/types';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { CourierAssign } from '@/components/shipments/CourierAssign';
+import { ShipmentLegs } from '@/components/shipments/ShipmentLegs';
 import { useAuthStore } from '@/store/authStore';
 
 export function ShipmentDetail() {
@@ -71,18 +72,48 @@ export function ShipmentDetail() {
         </Link>
       </div>
 
+      {myRole === 'client' && pkg.status === 'delivered' && !pkg.client_accepted && (
+        <ClientConfirmBanner packageId={pkg.id} onConfirmed={() => setPkg({ ...pkg, client_accepted: true, client_accepted_at: new Date().toISOString() })} />
+      )}
+      {pkg.client_accepted && (
+        <div className="mb-4 flex items-center gap-2 rounded-md bg-status-delivered/10 px-4 py-3 text-sm text-status-delivered">
+          <CheckCircle2 className="h-4 w-4" />
+          Receipt confirmed by recipient{pkg.client_accepted_at ? ` on ${new Date(pkg.client_accepted_at).toLocaleString()}` : ''}.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="panel p-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sender</p>
           <p className="font-medium text-slate-800">{pkg.sender_name}</p>
           <p className="text-sm text-slate-500">{pkg.sender_address}</p>
           {pkg.sender_phone && <p className="text-sm text-slate-500">{pkg.sender_phone}</p>}
+          {pkg.sender_lat && pkg.sender_lng && (
+            <a
+              href={`https://maps.google.com/?q=${pkg.sender_lat},${pkg.sender_lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs text-jkoms-steel hover:underline"
+            >
+              <MapPin className="h-3 w-3" /> Pinned location
+            </a>
+          )}
         </div>
         <div className="panel p-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Recipient</p>
           <p className="font-medium text-slate-800">{pkg.recipient_name}</p>
           <p className="text-sm text-slate-500">{pkg.recipient_address}</p>
           <p className="text-sm text-slate-500">{pkg.recipient_phone}</p>
+          {pkg.recipient_lat && pkg.recipient_lng && (
+            <a
+              href={`https://maps.google.com/?q=${pkg.recipient_lat},${pkg.recipient_lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs text-jkoms-steel hover:underline"
+            >
+              <MapPin className="h-3 w-3" /> Pinned location
+            </a>
+          )}
         </div>
         <div className="panel p-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Route</p>
@@ -106,6 +137,10 @@ export function ShipmentDetail() {
             onAssigned={(courierId) => setPkg({ ...pkg, assigned_courier_id: courierId })}
           />
         )}
+      </div>
+
+      <div className="mt-4">
+        <ShipmentLegs packageId={pkg.id} />
       </div>
 
       {events.some((e) => e.attachment_url || e.signature_data) && (
@@ -152,6 +187,34 @@ export function ShipmentDetail() {
           </ol>
         )}
       </div>
+    </div>
+  );
+}
+
+function ClientConfirmBanner({ packageId, onConfirmed }: { packageId: string; onConfirmed: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    setSaving(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc('confirm_package_delivery', { pkg_id: packageId });
+    setSaving(false);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    onConfirmed();
+  }
+
+  return (
+    <div className="mb-4 flex flex-col gap-2 rounded-md border border-jkoms-navy/20 bg-jkoms-navy/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-jkoms-navy">This package was marked delivered. Did you receive it?</p>
+      <button onClick={() => void confirm()} disabled={saving} className="btn-primary flex items-center justify-center gap-2 text-sm">
+        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+        Confirm I received this
+      </button>
+      {error && <p className="text-xs text-status-exception">{error}</p>}
     </div>
   );
 }

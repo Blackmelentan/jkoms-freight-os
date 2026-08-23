@@ -13,6 +13,10 @@ export interface Profile {
   phone: string | null;
   depot_id: string | null;
   must_change_password: boolean;
+  client_code: string | null;
+  home_address: string | null;
+  home_lat: number | null;
+  home_lng: number | null;
   created_at: string;
 }
 
@@ -79,7 +83,55 @@ export interface Package {
   declared_value: number | null;
   service_level: 'standard' | 'express' | 'same_day';
   notes: string | null;
+  sender_lat: number | null;
+  sender_lng: number | null;
+  recipient_lat: number | null;
+  recipient_lng: number | null;
+  client_accepted: boolean;
+  client_accepted_at: string | null;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LegType =
+  | 'pickup'
+  | 'warehouse_intake'
+  | 'freight_transit'
+  | 'customs'
+  | 'port_arrival'
+  | 'out_for_delivery'
+  | 'delivered';
+
+export const LEG_TYPE_LABEL: Record<LegType, string> = {
+  pickup: 'Pickup',
+  warehouse_intake: 'Warehouse Intake',
+  freight_transit: 'Freight Transit',
+  customs: 'Customs',
+  port_arrival: 'Port Arrival',
+  out_for_delivery: 'Out for Delivery',
+  delivered: 'Delivered'
+};
+
+export type TransportMode = 'road' | 'air' | 'sea';
+export type CustomsStatus = 'not_applicable' | 'pending' | 'cleared' | 'hold';
+
+export interface ShipmentLeg {
+  id: string;
+  package_id: string;
+  leg_order: number;
+  leg_type: LegType;
+  transport_mode: TransportMode | null;
+  carrier_name: string | null;
+  vehicle_ref: string | null;
+  origin_label: string | null;
+  destination_label: string | null;
+  customs_status: CustomsStatus;
+  departed_at: string | null;
+  eta: string | null;
+  arrived_at: string | null;
+  notes: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
