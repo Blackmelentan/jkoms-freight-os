@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
 import { generateTrackingCode } from '@/utils/trackingCode';
 import { useAuthStore } from '@/store/authStore';
-import type { Depot, Profile } from '@/types';
+import type { Depot, Profile, Locker } from '@/types';
 import { Loader2, Printer, Search, UserCheck, X } from 'lucide-react';
 import { GeoCapture } from '@/components/ui/GeoCapture';
 
@@ -21,8 +21,10 @@ interface FormState {
   recipient_lng: number | null;
   origin_depot_id: string;
   destination_depot_id: string;
+  locker_id: string;
   weight_kg: string;
   declared_value: string;
+  shipping_fee: string;
   service_level: 'standard' | 'express' | 'same_day';
   notes: string;
 }
@@ -40,8 +42,10 @@ const EMPTY_FORM: FormState = {
   recipient_lng: null,
   origin_depot_id: '',
   destination_depot_id: '',
+  locker_id: '',
   weight_kg: '',
   declared_value: '',
+  shipping_fee: '',
   service_level: 'standard',
   notes: ''
 };
@@ -51,6 +55,7 @@ export function PackageCreate() {
   const profile = useAuthStore((s) => s.profile);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [depots, setDepots] = useState<Depot[]>([]);
+  const [lockers, setLockers] = useState<Locker[]>([]);
   const [draftCode, setDraftCode] = useState(generateTrackingCode());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +67,11 @@ export function PackageCreate() {
 
   useEffect(() => {
     void supabase.from('depots').select('*').then(({ data }) => setDepots((data as Depot[]) ?? []));
+    void supabase
+      .from('lockers')
+      .select('*')
+      .eq('active', true)
+      .then(({ data }) => setLockers((data as Locker[]) ?? []));
   }, []);
 
   useEffect(() => {
@@ -110,8 +120,10 @@ export function PackageCreate() {
         client_id: linkedClient?.id ?? null,
         origin_depot_id: form.origin_depot_id || null,
         destination_depot_id: form.destination_depot_id || null,
+        locker_id: form.locker_id || null,
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
         declared_value: form.declared_value ? Number(form.declared_value) : null,
+        shipping_fee: form.shipping_fee ? Number(form.shipping_fee) : null,
         service_level: form.service_level,
         notes: form.notes || null,
         created_by: profile.id
@@ -248,6 +260,12 @@ export function PackageCreate() {
               options={depots.map((d) => ({ value: d.id, label: `${d.name} (${d.code})` }))}
             />
             <SelectField
+              label="Received at Locker (if applicable)"
+              value={form.locker_id}
+              onChange={(v) => update('locker_id', v)}
+              options={lockers.map((l) => ({ value: l.id, label: `${l.label} (${l.code})` }))}
+            />
+            <SelectField
               label="Service Level"
               value={form.service_level}
               onChange={(v) => update('service_level', v as FormState['service_level'])}
@@ -263,6 +281,12 @@ export function PackageCreate() {
               type="number"
               value={form.declared_value}
               onChange={(v) => update('declared_value', v)}
+            />
+            <Field
+              label="Shipping Fee (charged to client)"
+              type="number"
+              value={form.shipping_fee}
+              onChange={(v) => update('shipping_fee', v)}
             />
             <Field label="Notes" value={form.notes} onChange={(v) => update('notes', v)} full textarea />
           </Section>

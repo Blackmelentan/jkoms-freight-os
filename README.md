@@ -200,6 +200,23 @@ not something the app can change.
   ("the courier says they delivered it, when exactly did that scan happen
   and from which method").
 
+## Manifests & invoices
+
+**Manifests** (sidebar, admin/warehouse) group multiple packages traveling
+together on one freight leg into a single export/customs document — search
+and add packages, set transport mode/carrier/vehicle ref, and it generates a
+printable A4 document with a package table, totals, and signature lines for
+the preparer and customs officer. Past manifests are listed and reopenable.
+
+**Invoices** are per-package — an "Invoice" button on any Shipment Detail
+page (admin/warehouse) generates a printable A4 invoice showing the
+`shipping_fee` (what was actually charged) separately from `declared_value`
+(the customs/insurance figure, clearly labeled as not a charge).
+
+Both reuse the browser's print-to-PDF (same pattern as thermal labels) — no
+PDF library dependency. In the print dialog, select **A4** paper size, not
+the 4×6 thermal default.
+
 ## Still worth planning for (not built)
 
 - **WhatsApp Business API** instead of/alongside plain SMS — Africa's
@@ -212,3 +229,12 @@ not something the app can change.
   network to admin/warehouse; a depot-scoped staff role (see only their
   depot's packages) isn't built, only the `depot_id` column exists on
   `profiles` for future use.
+- **Locker intake scanning** — right now logging a package as "received at
+  locker X" is a manual dropdown on package creation. A dedicated scan flow
+  for locker intake (barcode on incoming UK parcels → auto-match by
+  client_code in the address → notify client) would close the loop, but
+  isn't built.
+- **Auto-generated invoices sent by email** — invoices currently need a
+  manual click + print; the prototype showed "Invoice generated and sent to
+  client email" automatically on a status trigger, which would need an Edge
+  Function similar to the SMS notification one.

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PackagePlus, ScanLine, Printer, AlertTriangle } from 'lucide-react';
+import { PackagePlus, ScanLine, Printer, AlertTriangle, MapPinned, Copy, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import type { Package, ShipmentStatus } from '@/types';
+import type { Package, ShipmentStatus, Locker } from '@/types';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { useAuthStore } from '@/store/authStore';
 
@@ -18,11 +18,19 @@ export function Dashboard() {
   const isStaff = profile?.role === 'admin' || profile?.role === 'warehouse';
   const isCourier = profile?.role === 'courier';
   const [recent, setRecent] = useState<Package[]>([]);
+  const [lockers, setLockers] = useState<Locker[]>([]);
   const [counts, setCounts] = useState<Counts>({ total: 0, inTransit: 0, deliveredToday: 0, exceptions: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void loadData();
+    if (profile?.role === 'client') {
+      void supabase
+        .from('lockers')
+        .select('*')
+        .eq('active', true)
+        .then(({ data }) => setLockers((data as Locker[]) ?? []));
+    }
 
     // Live updates: any insert/update on packages refreshes the dashboard
     // without a manual refresh — this is the "real-time database updates"
@@ -114,6 +122,19 @@ export function Dashboard() {
           <p className="max-w-xs text-right text-xs text-slate-500">
             Give this to a courier or warehouse staffer to link a package to your account.
           </p>
+        </div>
+      )}
+
+      {profile?.role === 'client' && lockers.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <MapPinned className="h-3.5 w-3.5" /> Ship online orders to
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {lockers.map((l) => (
+              <LockerAddressCard key={l.id} locker={l} clientCode={profile.client_code} />
+            ))}
+          </div>
         </div>
       )}
 
@@ -214,6 +235,29 @@ function StatCard({
         {loading ? '—' : value}
         {icon}
       </p>
+    </div>
+  );
+}
+
+function LockerAddressCard({ locker, clientCode }: { locker: Locker; clientCode: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const fullAddress = `${locker.address}\nRef: ${clientCode ?? ''}`;
+
+  return (
+    <div className="panel p-4">
+      <p className="mb-1 text-sm font-semibold text-jkoms-navy">{locker.label}</p>
+      <p className="whitespace-pre-line text-xs text-slate-500">{locker.address}</p>
+      <p className="mt-1 text-xs font-medium text-jkoms-steel">Include reference: {clientCode}</p>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(fullAddress);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        }}
+        className="mt-2 flex items-center gap-1 text-xs text-slate-400 hover:text-jkoms-navy"
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} Copy address + reference
+      </button>
     </div>
   );
 }

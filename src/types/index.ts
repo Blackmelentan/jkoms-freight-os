@@ -64,6 +64,28 @@ export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
   exception: 'Exception'
 };
 
+export interface Manifest {
+  id: string;
+  manifest_code: string;
+  title: string;
+  transport_mode: TransportMode | null;
+  carrier_name: string | null;
+  vehicle_ref: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Locker {
+  id: string;
+  code: string;
+  label: string;
+  address: string;
+  country: string;
+  active: boolean;
+  created_at: string;
+}
+
 export interface Package {
   id: string;
   tracking_code: string; // human-readable, e.g. JKG-2608-000482
@@ -78,9 +100,11 @@ export interface Package {
   origin_depot_id: string | null;
   destination_depot_id: string | null;
   assigned_courier_id: string | null;
+  locker_id: string | null;
   client_id: string | null;
   weight_kg: number | null;
   declared_value: number | null;
+  shipping_fee: number | null;
   service_level: 'standard' | 'express' | 'same_day';
   notes: string | null;
   sender_lat: number | null;

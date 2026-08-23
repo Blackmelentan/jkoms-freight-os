@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Printer, CheckCircle2, Loader2 } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
+import { ArrowLeft, MapPin, Printer, CheckCircle2, Loader2, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import type { Package, ScanEvent, Depot } from '@/types';
+import type { Package, ScanEvent, Depot, Locker } from '@/types';
 import { SHIPMENT_STATUS_LABEL } from '@/types';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { CourierAssign } from '@/components/shipments/CourierAssign';
 import { ShipmentLegs } from '@/components/shipments/ShipmentLegs';
+import { InvoiceDocument } from '@/components/manifests/InvoiceDocument';
 import { useAuthStore } from '@/store/authStore';
 
 export function ShipmentDetail() {
@@ -15,6 +17,9 @@ export function ShipmentDetail() {
   const [pkg, setPkg] = useState<Package | null>(null);
   const [events, setEvents] = useState<ScanEvent[]>([]);
   const [depots, setDepots] = useState<Record<string, Depot>>({});
+  const [lockers, setLockers] = useState<Record<string, Locker>>({});
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const handlePrintInvoice = useReactToPrint({ content: () => invoiceRef.current, documentTitle: pkg ? `invoice-${pkg.tracking_code}` : 'invoice' });
 
   useEffect(() => {
     if (!id) return;
@@ -36,20 +41,24 @@ export function ShipmentDetail() {
   }, [id]);
 
   async function load(packageId: string) {
-    const [{ data: pkgData }, { data: eventData }, { data: depotData }] = await Promise.all([
+    const [{ data: pkgData }, { data: eventData }, { data: depotData }, { data: lockerData }] = await Promise.all([
       supabase.from('packages').select('*').eq('id', packageId).single(),
       supabase
         .from('scan_events')
         .select('*')
         .eq('package_id', packageId)
         .order('created_at', { ascending: false }),
-      supabase.from('depots').select('*')
+      supabase.from('depots').select('*'),
+      supabase.from('lockers').select('*')
     ]);
     setPkg(pkgData as Package);
     setEvents((eventData as ScanEvent[]) ?? []);
     const map: Record<string, Depot> = {};
     (depotData as Depot[] | null)?.forEach((d) => (map[d.id] = d));
     setDepots(map);
+    const lockerMap: Record<string, Locker> = {};
+    (lockerData as Locker[] | null)?.forEach((l) => (lockerMap[l.id] = l));
+    setLockers(lockerMap);
   }
 
   if (!pkg) {
@@ -57,7 +66,7 @@ export function ShipmentDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:px-6">
+    <div className="relative mx-auto max-w-4xl px-4 py-6 md:px-6">
       <Link to="/shipments" className="mb-4 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-jkoms-navy">
         <ArrowLeft className="h-4 w-4" /> Back to shipments
       </Link>
@@ -67,9 +76,16 @@ export function ShipmentDetail() {
           <h1 className="font-mono text-2xl font-display text-jkoms-navy">{pkg.tracking_code}</h1>
           <div className="mt-1"><StatusPill status={pkg.status} /></div>
         </div>
-        <Link to="/labels" state={{ justCreatedId: pkg.id }} className="btn-secondary flex items-center gap-2 text-sm">
-          <Printer className="h-4 w-4" /> Reprint Label
-        </Link>
+        <div className="flex gap-2">
+          {(myRole === 'admin' || myRole === 'warehouse') && (
+            <button onClick={handlePrintInvoice} className="btn-secondary flex items-center gap-2 text-sm">
+              <Receipt className="h-4 w-4" /> Invoice
+            </button>
+          )}
+          <Link to="/labels" state={{ justCreatedId: pkg.id }} className="btn-secondary flex items-center gap-2 text-sm">
+            <Printer className="h-4 w-4" /> Reprint Label
+          </Link>
+        </div>
       </div>
 
       {myRole === 'client' && pkg.status === 'delivered' && !pkg.client_accepted && (
@@ -129,6 +145,10 @@ export function ShipmentDetail() {
           <p className="text-sm text-slate-700 capitalize">Service: {pkg.service_level.replace('_', ' ')}</p>
           {pkg.weight_kg && <p className="text-sm text-slate-700">Weight: {pkg.weight_kg} kg</p>}
           {pkg.declared_value && <p className="text-sm text-slate-700">Declared value: {pkg.declared_value}</p>}
+          {pkg.shipping_fee != null && <p className="text-sm text-slate-700">Shipping fee: {pkg.shipping_fee}</p>}
+          {pkg.locker_id && lockers[pkg.locker_id] && (
+            <p className="text-sm text-slate-700">Received at: {lockers[pkg.locker_id].label}</p>
+          )}
         </div>
         {(myRole === 'admin' || myRole === 'warehouse') && (
           <CourierAssign
@@ -186,6 +206,9 @@ export function ShipmentDetail() {
             ))}
           </ol>
         )}
+      </div>
+      <div className="pointer-events-none absolute -left-[9999px] top-0">
+        <InvoiceDocument ref={invoiceRef} pkg={pkg} />
       </div>
     </div>
   );
