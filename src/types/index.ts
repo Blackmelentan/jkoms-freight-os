@@ -101,6 +101,105 @@ export interface PackageItem {
   created_at: string;
 }
 
+export type ContainerStatus = 'loading' | 'closed' | 'in_transit' | 'arrived' | 'customs' | 'released';
+
+export const CONTAINER_STATUS_LABEL: Record<ContainerStatus, string> = {
+  loading: 'Loading',
+  closed: 'Closed',
+  in_transit: 'In Transit',
+  arrived: 'Arrived',
+  customs: 'Customs',
+  released: 'Released'
+};
+
+export interface Container {
+  id: string;
+  container_number: string;
+  seal_number: string | null;
+  transport_mode: TransportMode;
+  carrier_name: string | null;
+  destination_port: string | null;
+  status: ContainerStatus;
+  closing_at: string | null;
+  departed_at: string | null;
+  arrived_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type VehicleType = 'fleet_van' | 'fleet_truck' | 'client_vehicle';
+export type VehicleStatus = 'active' | 'maintenance' | 'retired' | 'awaiting_shipment' | 'shipped' | 'delivered';
+
+export const VEHICLE_TYPE_LABEL: Record<VehicleType, string> = {
+  fleet_van: 'Fleet Van',
+  fleet_truck: 'Fleet Truck',
+  client_vehicle: 'Client Vehicle (RORO)'
+};
+
+export interface Vehicle {
+  id: string;
+  vehicle_type: VehicleType;
+  registration_plate: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+  vin: string | null;
+  owner_client_id: string | null;
+  package_id: string | null;
+  assigned_driver_id: string | null;
+  depot_id: string | null;
+  status: VehicleStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export type POStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
+
+export const PO_STATUS_LABEL: Record<POStatus, string> = {
+  draft: 'Draft',
+  ordered: 'Ordered',
+  received: 'Received',
+  cancelled: 'Cancelled'
+};
+
+export interface Supplier {
+  id: string;
+  name: string;
+  category: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  supplier_id: string | null;
+  status: POStatus;
+  order_date: string | null;
+  expected_date: string | null;
+  received_date: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  po_id: string;
+  item_name: string;
+  quantity: number;
+  unit_cost: number | null;
+  created_at: string;
+}
+
 export interface Manifest {
   id: string;
   manifest_code: string;

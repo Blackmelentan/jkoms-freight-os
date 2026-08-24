@@ -48,12 +48,13 @@ Package form pre-filled with the requester's details, and gets marked
 - ⬜ Locker intake **scanning** specifically (today it's a manual dropdown
       at package-creation time, not a barcode scan workflow)
 
-## 6. Containers — ⬜ NOT STARTED
+## 6. Containers — ✅ BUILT
 Distinct from Manifests (which are export/customs paperwork for a batch).
-A **container** is the physical loading unit: container number, seal
-number, mode (ocean/RORO), a closing/cutoff time ("closes tonight"), and
-which shipments are physically loaded inside it. Prototype 2 shows this as
-its own dashboard tile ("Container Load", "Container closes tonight").
+A container is now the physical loading unit itself: container number,
+seal number, mode, a closing/cutoff time with a "closes soon" warning,
+and its own status lifecycle (loading → closed → in transit → arrived →
+customs → released), with packages searchable/addable directly on the
+container's detail view.
 
 ## 7. Manifests & Invoicing
 - ✅ Export/customs manifests (batch of packages, printable A4)
@@ -70,19 +71,20 @@ its own dashboard tile ("Container Load", "Container closes tonight").
       condition/damage documentation at any handling point, not just at
       delivery)
 
-## 9. Fleet / Vehicles — ⬜ NOT STARTED
-Prototype references "Drivers Active," RORO (vehicle-carrying ocean
-freight — i.e., clients shipping their own cars), and road-freight legs
-with a vehicle. Two distinct concepts bundled under "vehicles":
-  a) **Company fleet** (delivery vans/trucks used for local delivery)
-  b) **RORO cargo** (a client's own vehicle being shipped as freight)
-Neither is modeled yet — `shipment_legs.vehicle_ref` is free text today,
-not a real fleet/vehicle registry.
+## 9. Fleet / Vehicles — ✅ BUILT
+Two distinct concepts, now both modeled under one Fleet page with tabs:
+  a) **Company fleet** (vans/trucks for local delivery — assigned driver + depot)
+  b) **RORO cargo** (a client's own vehicle shipped as freight — make/model/
+     VIN for customs, linked to the owning client account)
+`shipment_legs.vehicle_ref` remains free text for the freight-leg
+description (flight/vessel/vehicle reference on a journey leg); the new
+`vehicles` table is the actual registry of fleet and client vehicles.
 
-## 10. Procurement — ⬜ NOT STARTED
-Not referenced in the prototypes explicitly, but you asked for it directly:
-purchasing/tracking packaging materials, thermal label rolls, fuel, etc.
-Needs its own module — suppliers, purchase orders, received-stock log.
+## 10. Procurement — ✅ BUILT
+Suppliers directory (name, category, contact info) and purchase orders with
+line items — quantity, unit cost, running total, and a status lifecycle
+(draft → ordered → received → cancelled), auto-stamping the received date.
+Internal-only (admin/warehouse), not visible to couriers or clients.
 
 ## 11. Analytics / Command Center
 - ✅ Recharts dashboards: daily volume, status breakdown, service-level split
