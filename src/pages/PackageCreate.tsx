@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
 import { generateTrackingCode } from '@/utils/trackingCode';
@@ -52,8 +52,23 @@ const EMPTY_FORM: FormState = {
 
 export function PackageCreate() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const bookingPrefill = (
+    location.state as {
+      fromBooking?: { id: string; sender_name?: string; sender_phone?: string | null; notes?: string };
+    } | null
+  )?.fromBooking;
   const profile = useAuthStore((s) => s.profile);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>(
+    bookingPrefill
+      ? {
+          ...EMPTY_FORM,
+          sender_name: bookingPrefill.sender_name ?? '',
+          sender_phone: bookingPrefill.sender_phone ?? '',
+          notes: bookingPrefill.notes ?? ''
+        }
+      : EMPTY_FORM
+  );
   const [depots, setDepots] = useState<Depot[]>([]);
   const [lockers, setLockers] = useState<Locker[]>([]);
   const [draftCode, setDraftCode] = useState(generateTrackingCode());
@@ -142,6 +157,13 @@ export function PackageCreate() {
         setError(insertError.message);
       }
       return;
+    }
+
+    if (bookingPrefill) {
+      await supabase
+        .from('bookings')
+        .update({ status: 'converted', converted_package_id: data.id })
+        .eq('id', bookingPrefill.id);
     }
 
     // Straight to the label print screen with this package pre-selected.

@@ -8,6 +8,7 @@ import { SHIPMENT_STATUS_LABEL } from '@/types';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { CourierAssign } from '@/components/shipments/CourierAssign';
 import { ShipmentLegs } from '@/components/shipments/ShipmentLegs';
+import { PackageItems } from '@/components/shipments/PackageItems';
 import { InvoiceDocument } from '@/components/manifests/InvoiceDocument';
 import { useAuthStore } from '@/store/authStore';
 
@@ -161,6 +162,10 @@ export function ShipmentDetail() {
 
       <div className="mt-4">
         <ShipmentLegs packageId={pkg.id} />
+      </div>
+
+      <div className="mt-4">
+        <PackageItems packageId={pkg.id} />
       </div>
 
       {events.some((e) => e.attachment_url || e.signature_data) && (

@@ -64,6 +64,43 @@ export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
   exception: 'Exception'
 };
 
+export type BookingStatus = 'pending_review' | 'confirmed' | 'converted' | 'declined';
+
+export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  pending_review: 'Pending Review',
+  confirmed: 'Confirmed',
+  converted: 'Converted',
+  declined: 'Declined'
+};
+
+export interface Booking {
+  id: string;
+  booking_ref: string;
+  client_id: string | null;
+  requester_name: string;
+  requester_phone: string | null;
+  requester_email: string | null;
+  service_type: string;
+  destination: string;
+  preferred_date: string | null;
+  notes: string | null;
+  status: BookingStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  converted_package_id: string | null;
+  created_at: string;
+}
+
+export interface PackageItem {
+  id: string;
+  package_id: string;
+  category: string;
+  description: string;
+  quantity: number;
+  unit_price: number | null;
+  created_at: string;
+}
+
 export interface Manifest {
   id: string;
   manifest_code: string;

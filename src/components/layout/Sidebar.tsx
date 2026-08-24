@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PackagePlus, ScanLine, BarChart3, Truck, Printer, ShieldCheck, MapPinned, FileText } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, ScanLine, BarChart3, Truck, Printer, ShieldCheck, MapPinned, FileText, ClipboardList } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import type { UserRole } from '@/types';
 
@@ -12,6 +12,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'warehouse', 'courier', 'client'] },
+  { to: '/bookings', label: 'Bookings', icon: ClipboardList, roles: ['admin', 'warehouse', 'client'] },
   { to: '/packages/new', label: 'New Package', icon: PackagePlus, roles: ['admin', 'warehouse'] },
   { to: '/labels', label: 'Print Labels', icon: Printer, roles: ['admin', 'warehouse'] },
   { to: '/scan', label: 'Scan', icon: ScanLine, roles: ['admin', 'warehouse', 'courier'] },

@@ -17,6 +17,7 @@ import { Analytics } from '@/pages/Analytics';
 import { AdminUsers } from '@/pages/AdminUsers';
 import { Lockers } from '@/pages/Lockers';
 import { Manifests } from '@/pages/Manifests';
+import { Bookings } from '@/pages/Bookings';
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -84,6 +85,7 @@ export default function App() {
       <Route path="/accounts" element={<RequireAuth><AdminUsers /></RequireAuth>} />
       <Route path="/lockers" element={<RequireAuth><Lockers /></RequireAuth>} />
       <Route path="/manifests" element={<RequireAuth><Manifests /></RequireAuth>} />
+      <Route path="/bookings" element={<RequireAuth><Bookings /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
