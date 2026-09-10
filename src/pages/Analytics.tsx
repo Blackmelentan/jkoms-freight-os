@@ -68,7 +68,7 @@ export function Analytics() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="panel p-5 lg:col-span-2">
-            <p className="mb-4 text-sm font-semibold text-jkoms-navy">Created vs Delivered — Daily</p>
+            <p className="mb-4 text-sm font-semibold text-jkoms-navy">Created vs Delivered Daily</p>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={dailyVolume}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef1f5" />
