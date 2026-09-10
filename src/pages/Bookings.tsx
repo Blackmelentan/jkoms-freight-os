@@ -22,7 +22,7 @@ const STATUS_STYLE: Record<BookingStatus, string> = {
  * The intake stage before a package exists. Clients submit a request here
  * (service type, destination, rough date); staff review and confirm/decline
  * before it becomes an actual tracked package. Same page serves both roles
- * — the view just changes based on who's looking.
+ * the view just changes based on who's looking.
  */
 export function Bookings() {
   const profile = useAuthStore((s) => s.profile);
