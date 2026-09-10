@@ -40,7 +40,7 @@ export function Login() {
             className="w-full max-w-sm"
           />
           <p className="max-w-xs text-sm text-jkoms-silver/80">
-            Freight and logistics operations — warehouse, courier, and depot workflows in one system.
+            Freight and logistics operations warehouse, courier, and depot workflows in one system.
           </p>
         </div>
       </div>
