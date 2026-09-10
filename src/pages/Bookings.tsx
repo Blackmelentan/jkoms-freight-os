@@ -57,7 +57,7 @@ export function Bookings() {
 
   function convertToPackage(booking: Booking) {
     // Hands off to the existing New Package form, pre-filled from the
-    // booking — staff still fill in the actual address/weight details that
+    // booking staff still fill in the actual address/weight details that
     // a booking request doesn't capture, but don't retype the basics.
     navigate('/packages/new', {
       state: {
