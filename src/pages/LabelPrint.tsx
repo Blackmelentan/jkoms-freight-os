@@ -118,7 +118,7 @@ export function LabelPrint() {
             <ul className="list-inside list-disc space-y-1">
               <li>Install the Munbyn driver, then add it as a standard printer on this device.</li>
               <li>In the print dialog: paper size 4×6in, margins "None," scale 100%.</li>
-              <li>Windows: disable "Fit to page" — the label CSS is already sized exactly.</li>
+              <li>Windows: disable "Fit to page" the label CSS is already sized exactly.</li>
               <li>macOS: select "Actual size" in the print panel, not "Scale to fit."</li>
             </ul>
           </div>
