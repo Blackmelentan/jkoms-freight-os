@@ -13,13 +13,13 @@ const ROLES: UserRole[] = ['admin', 'warehouse', 'courier', 'client'];
  * Role/account management for admins. Two important constraints baked in:
  *
  * 1. The Supabase anon key (what this app ships with) can never create auth
- *    users directly — that requires the service_role key, which must never
+ *    users directly that requires the service_role key, which must never
  *    reach the browser. So "adding" a user here is a two-step handoff: the
  *    admin creates the login in Supabase Auth (dashboard), then comes back
  *    here to set that person's role/name/phone against the profile row that
  *    gets auto-created by the on_auth_user_created trigger.
  * 2. Editing an EXISTING user's role/details, though, works entirely in-app
- *    via the profiles_admin_update_all RLS policy — that's the main thing
+ *    via the profiles_admin_update_all RLS policy that's the main thing
  *    this screen is for day to day.
  */
 export function AdminUsers() {
@@ -166,7 +166,7 @@ export function AdminUsers() {
 
 function NewAccountInstructions() {
   const [copied, setCopied] = useState(false);
-  const sql = `-- After creating the login in Supabase Auth, set their role here:
+  const sql = `After creating the login in Supabase Auth, set their role here:
 update profiles set role = 'warehouse', full_name = 'Full Name'
 where id = 'paste-the-user-uuid-here';`;
 
@@ -178,7 +178,7 @@ where id = 'paste-the-user-uuid-here';`;
       <ol className="list-inside list-decimal space-y-1 text-sm text-slate-600">
         <li>Supabase Dashboard → Authentication → Users → Add user (set email + password)</li>
         <li>Copy their User UID from that same screen</li>
-        <li>They'll appear in the table below automatically — just set their role there</li>
+        <li>They'll appear in the table below automatically just set their role there</li>
       </ol>
       <p className="mt-3 text-xs text-slate-400">
         Or run this directly in the SQL Editor right after creating the login:
